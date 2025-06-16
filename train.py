@@ -8,25 +8,21 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
-from dataset import CocoDataset, safe_collate
+from torch.utils.data import DataLoader
+from dataset import ImageDataset, safe_collate
 from model import PFNet
 
 
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description='Train Perspective Network on COCO.')
+        description='Train Perspective Network.')
     #Paths
-    parser.add_argument('--dataset', required=True,
-                        metavar="/path/to/coco/",
-                        help='Directory of the MS-COCO dataset')
-    parser.add_argument('--year', required=False,
-                        default="2014",
-                        metavar="<year>",
-                        help='Year of the MS-COCO dataset (2014 or 2017) (default=2014)')
-    parser.add_argument('--logs', required=False,
+    parser.add_argument('--dataset',
+                        default="/home/gamma/MY_WORK/PFNet-pytorch/images",
+                        help='Directory of the images')
+    parser.add_argument('--logs',
                         default="./logs",
                         metavar="/path/to/logs/",
                         help='Logs and checkpoints directory (default=logs/)')
@@ -34,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--n_epoch', type=int, default=200,
                         help='set the number of epochs, default is 200')
-    parser.add_argument('--batch-size', type=int, default=32,
+    parser.add_argument('--batch-size', type=int, default=8,
                         help='set the batch size, default is 32.')
     parser.add_argument('--seed', type=int, default=1987,
                         help='Pseudo-RNG seed')
@@ -46,9 +42,8 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    # Data ####################################################################
-    train_dataset = CocoDataset(args.dataset, "train", year=args.year)
-    val_dataset = CocoDataset(args.dataset, "val", year=args.year)
+    train_dataset = ImageDataset(args.dataset, "train")
+    val_dataset = ImageDataset(args.dataset, "val")
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=safe_collate)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, collate_fn=safe_collate)
     print(len(train_dataset), len(train_loader), len(val_dataset), len(val_loader))
@@ -76,7 +71,6 @@ if __name__ == "__main__":
 
             train_inputs = batch_value[0].float().to(device)
             train_gt = batch_value[1].float().to(device)
-
             optimizer.zero_grad()
             train_outputs = model(train_inputs)
             loss = smooth_l1_loss(train_outputs, train_gt)
@@ -91,7 +85,6 @@ if __name__ == "__main__":
 
         train_loss /= len(train_loader)
         writer.add_scalar('train_loss', train_loss, epoch)
-
         # validation
         model.eval()
         with torch.no_grad():

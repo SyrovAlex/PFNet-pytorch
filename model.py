@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
+from torchvision.models import ResNet50_Weights
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -172,7 +173,7 @@ class PFNet(nn.Module):
 
     def _load_pretrained_weights(self):
         new_state_dict = {}
-        pretrained_dict = models.resnet50(pretrained=True)
+        pretrained_dict = models.resnet50(weights=ResNet50_Weights.DEFAULT)
         model_dict = self.state_dict()
         for k, v in pretrained_dict.state_dict().items():
             if k in model_dict.keys() and k != 'conv1.weight':
@@ -194,6 +195,7 @@ class PFNet(nn.Module):
         x = self.de_layer2(x)
         x = self.de_layer3(x)
         x = self.de_layer4(x)
+
         out = self.out(x)
 
         return out
